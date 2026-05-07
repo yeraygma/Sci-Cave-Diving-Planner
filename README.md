@@ -1,5 +1,5 @@
 [![DOI](https://zenodo.org/badge/1231940751.svg)](https://doi.org/10.5281/zenodo.20073076)
-# Sci Cave Dive Planner
+# Sci Cave Diving Planner
 
 A robust, conservative gas management dive planning tool designed specifically for scientific cave diving operations. Decompression calculations for each dive must be supplemented with these calculations. This project provides both an R script (`bt_S4_Eng.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
 
