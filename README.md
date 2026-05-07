@@ -52,24 +52,37 @@ Results provided for the execution of the dive plan:
 
 ## 3. Mathematical Foundations
 
-### Stop Half Depth (Ascent Profile)
-The **Stop Half Depth** represents the halfway point of the total depth (calculated as $D_{max} / 2$). 
-* **Procedure:** Below this depth, the ascent speed is **9 m/min**. Upon reaching the Stop Half Depth, the speed is reduced to **3 m/min** for the remainder of the ascent.
-* **Conservatism:** This value is always rounded up to the nearest multiple of 3 metres to facilitate easy memorisation and procedural safety during the dive.
+The planner employs a conservative algorithmic approach. All calculations are performed in **Absolute Atmosphere (ATA)** before conversion to **BAR**.
 
-### Minimum Gas (MG)
-Minimum Gas ensures that two divers under severe stress (`SCRs` = 30 L/min) can share air and ascend safely.
-$$mG = \frac{SCR_s \times P_{av} \times Tas \times 2}{T_{vol}}$$
-*Rounded up to the nearest 10 BAR.*
+### 3.1. Pressure Constants
+* **Max Pressure ($P_{max}$):** $(D_{max}/10) + 1$
+* **Average Bottom Pressure ($P_{ad}$):** $(D_{ad}/10) + 1$
+* **Average Ascent Pressure ($P_{av}$):** $\left((D_{max} / 2) / 10\right) + 1$
 
-### Turn Pressure (Strategy 4 - Sampling)
-This strategy solves the "slow in, fast out" problem. It ensures that at the point of maximum penetration ($P_n$), if an emergency occurs (two divers sharing air + lost guideline), there is enough gas to exit.
+### 3.2. Ascent Profile: Stop Half Depth
+The ascent manages off-gassing by transitioning speeds at the **Stop Half Depth** ($D_{shd}$):
+$$D_{shd} = \lceil (D_{max} / 2) / 3 \rceil \times 3$$
+*This value is rounded up to the nearest multiple of 3 metres for conservatism and ease of procedure.*
 
-1.  **Exit Gas ($sG$):** Gas required for two divers to swim the distance $P_n$ to the exit at speed $v_h$.
+* **Phase 1 (Bottom to $D_{shd}$):** Ascent at **9 m/min**. $t_{stop1} = \lceil (D_{max} - D_{shd}) / 9 \rceil$
+* **Phase 2 ($D_{shd}$ to Surface):** Ascent at **3 m/min**. $t_{surface} = D_{shd} / 3$
+* **Total Ascent Time ($T_{as}$):** $\lceil t_{stop1} + t_{surface} \rceil$
+
+### 3.3. Gas Reserves and Availability
+* **Minimum Gas ($MG$):** Reserve for two divers sharing air under stress.
+    $$mG = \frac{SCR_s \times P_{av} \times T_{as} \times 2}{T_{vol}}$$
+    *Rounded up to the nearest 10 BAR.*
+
+* **Usable Gas ($UG$):** $F_p - mG$.
+    *Rounded down to the nearest 10 BAR.*
+
+### 3.4. Turn Pressure ($TP$) Logic
+For **Strategy 4 (Sampling)**, $TP$ accounts for the specific exit requirements:
+1. **Exit Gas Consumption ($sG$):** Gas for two divers to swim distance $P_n$ at speed $v_h$.
     $$sG = \frac{ \left(\frac{P_n}{v_h \times 60}\right) \times SCR_s \times P_{ad} }{T_{vol}}$$
-
-2.  **Turn Pressure ($TP$):** Adds the exit gas requirement to the Minimum Gas plus a safety buffer of one-third of the Usable Gas.
+2. **Turn Pressure:**
     $$TP = \lceil \frac{1}{3}UG + MG + 2 \times sG \rceil_{10}$$
+    *This ensures enough gas for an emergency (air loss + lost guideline) at the furthest point.*
 
 ---
 
