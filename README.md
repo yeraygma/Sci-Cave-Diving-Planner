@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20073076.svg)](https://doi.org/10.5281/zenodo.20073076)
+[![DOI](https://zenodo.org/badge/1231940751.svg)](https://doi.org/10.5281/zenodo.20073076)
 # Sci Cave Dive Planner
 
 A robust, conservative dive planning tool designed specifically for scientific cave diving operations. This project provides both an R script (`bt_S4_Eng.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
