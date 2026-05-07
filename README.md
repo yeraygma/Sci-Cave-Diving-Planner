@@ -85,4 +85,4 @@ The tool includes a standalone HTML web app designed for maximum flexibility in 
 * **Pre-Dive Planning:** Its offline nature allows for quick, last-minute adjustments to the dive plan at the water's edge or on the vessel just before the immersion.
 
 **Developed by:** Yeray Gonzalez-Marrero  
-**Repository:** [Sci-Cave-Diving-Planner](https://github.com/yeraygma/Sci-Cave-Diving-Planner)
+
