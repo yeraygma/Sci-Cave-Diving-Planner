@@ -1,9 +1,9 @@
 [![DOI](https://zenodo.org/badge/1231940751.svg)](https://doi.org/10.5281/zenodo.20073076)
 # Sci Cave Dive Planner
 
-A robust, conservative dive planning tool designed specifically for scientific cave diving operations. This project provides both an R script (`bt_S4_Eng.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
+A robust, conservative gas management dive planning tool designed specifically for scientific cave diving operations. Decompression calculations for each dive must be supplemented with these calculations. This project provides both an R script (`bt_S4_Eng.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
 
-It is specifically tailored for scenarios where penetration speeds are significantly slower than exit speeds due to sampling or scientific data collection tasks.
+It is specifically tailored for scenarios where penetration speeds are significantly slower than exit speeds due to sampling or scientific data collection tasks (Strategy 4, sampling).
 
 ## 1. Variables Dictionary
 
@@ -36,17 +36,17 @@ Results provided for the execution of the dive plan:
 | **MG** | Minimum Gas. The absolute reserve required for two divers to safely ascend. | BAR |
 | **UG** | Usable Gas. Total gas available before touching the minimum reserve. | BAR |
 | **TP** | Turn Pressure. The gauge pressure at which the diver must exit. | BAR |
-| **Tb** | Bottom Time. Maximum time allowed before reaching Turn Pressure. | Minutes (min) |
-| **Tas** | Total Ascent Time. | Minutes (min) |
+| **Tb** | Bottom Time. Maximum time allowed before starting ascent. | Minutes (min) |
+| **Tas** | Total Ascent Time from starting ascent to the surface. | Minutes (min) |
 
 ---
 
 ## 2. Penetration Strategies
 
-* **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments.**
-* **Strategy 2 (Rule of Halves):** 50% for penetration, 50% for exit. **Not suitable for cave diving.**
+* **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments.** Suitable to not overhead environments.
+* **Strategy 2 (Rule of Halves):** 50% for the first leg, 50% for the return leg. **Not suitable for cave diving.** Suitable to not overhead environments.
 * **Strategy 3 (Rule of Thirds):** Standard cave protocol (1/3 in, 1/3 out, 1/3 reserve). Assumes equal speeds.
-* **Strategy 4 (Sampling Strategy):** Specifically for scientific diving. It accounts for slow penetration (sampling) and faster emergency exits. It calculates turn pressure based on distance and emergency scenarios.
+* **Strategy 4 (Sampling):** Specifically for scientific diving. It accounts for slow penetration (sampling) and faster emergency exits. It calculates turn pressure based on distance and emergency scenarios.
 
 ---
 
@@ -60,7 +60,7 @@ The planner employs a conservative algorithmic approach. All calculations are pe
 * **Average Ascent Pressure ($P_{av}$):** $\left((D_{max} / 2) / 10\right) + 1$
 
 ### 3.2. Ascent Profile: Stop Half Depth
-The ascent manages off-gassing by transitioning speeds at the **Stop Half Depth** ($D_{shd}$):
+The ascent manages off-gassing by transitioning speeds at the **Stop Half Depth** ($D_{shd}$), half of the maximum dive depth:
 $$D_{shd} = \lceil (D_{max} / 2) / 3 \rceil \times 3$$
 *This value is rounded up to the nearest multiple of 3 metres for conservatism and ease of procedure.*
 
@@ -69,7 +69,7 @@ $$D_{shd} = \lceil (D_{max} / 2) / 3 \rceil \times 3$$
 * **Total Ascent Time ($T_{as}$):** $\lceil t_{stop1} + t_{surface} \rceil$
 
 ### 3.3. Gas Reserves and Availability
-* **Minimum Gas ($MG$):** Reserve for two divers sharing air under stress.
+* **Minimum Gas ($MG$):** Reserve for two divers sharing air under stress from the start of the ascent to the surface.
     $$mG = \frac{SCR_s \times P_{av} \times T_{as} \times 2}{T_{vol}}$$
     *Rounded up to the nearest 10 BAR.*
 
@@ -82,12 +82,12 @@ For **Strategy 4 (Sampling)**, $TP$ accounts for the specific exit requirements:
     $$sG = \frac{ \left(\frac{P_n}{v_h \times 60}\right) \times SCR_s \times P_{ad} }{T_{vol}}$$
 2. **Turn Pressure:**
     $$TP = \lceil \frac{1}{3}UG + MG + 2 \times sG \rceil_{10}$$
-    *This ensures enough gas for an emergency (air loss + lost guideline) at the furthest point.*
+    *This ensures enough gas for an emergency for two divers sharing gas at the furthest point.*
 
 ---
 
 ## 4. Usage
-This planner is provided for research and educational purposes. Always verify your plans with established decompression tables and secondary software.
+This planner is provided for research and educational purposes. Always verify your plans with alternative calculations and combine these results with decompression tables. 
 
 ### Web App Portability
 The tool includes a standalone HTML web app designed for maximum flexibility in field research environments:
