@@ -1,6 +1,6 @@
 # Sci Cave Dive Planner
 
-A robust, conservative dive planning tool designed specifically for scientific cave diving operations. This project provides both an R script (`bt_S4.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
+A robust, conservative dive planning tool designed specifically for scientific cave diving operations. This project provides both an R script (`bt_S4_Eng.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
 
 It is specifically tailored for scenarios where penetration speeds are significantly slower than exit speeds due to sampling or scientific data collection tasks.
 
@@ -75,5 +75,13 @@ This strategy solves the "slow in, fast out" problem. It ensures that at the poi
 ## 4. Usage
 This planner is provided for research and educational purposes. Always verify your plans with established decompression tables and secondary software.
 
-**Developed by:** Yeray G.M.  
+### Web App Portability
+The tool includes a standalone HTML web app designed for maximum flexibility in field research environments:
+
+* **Cross-Platform:** The app runs on desktop computers, laptops, tablets, and smartphones.
+* **Offline Access:** It is designed to function entirely without an internet connection. This makes it ideal for use on dive boats or remote field sites where connectivity is unavailable.
+* **Mobile Execution:** To use it on a mobile device, simply download the file `scicavedive_planner_v1_0_0.html` to your device's storage. You can open the file directly using any standard web browser (e.g., Chrome, Safari, Firefox) without needing mobile data or Wi-Fi.
+* **Pre-Dive Planning:** Its offline nature allows for quick, last-minute adjustments to the dive plan at the water's edge or on the vessel just before the immersion.
+
+**Developed by:** Yeray Gonzalez-Marrero  
 **Repository:** [Sci-Cave-Diving-Planner](https://github.com/yeraygma/Sci-Cave-Diving-Planner)
