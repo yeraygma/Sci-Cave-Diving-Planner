@@ -14,7 +14,6 @@
             --bg-color: #f4f4f9;
             --card-bg: #ffffff;
             --text-color: #333333;
-            /* Font management strategy: Manejo de fuentes para publicación */
             --font-title: 22px;
             --font-subtitle: 18px;
             --font-body: 16px;
@@ -73,6 +72,13 @@
             font-size: var(--font-body);
             box-sizing: border-box;
             background-color: white;
+        }
+
+        /* Disabled/greyed-out style for Penetration Distance when not needed */
+        input[type="number"]:disabled {
+            background-color: #e9ecef;
+            color: #aaa;
+            cursor: not-allowed;
         }
 
         button {
@@ -183,13 +189,13 @@
     </div>
 
     <div class="form-group">
-        <label for="Pn">Penetration distance (metres):</label>
+        <label for="Pn" id="Pn_label">Penetration distance (metres):</label>
         <input type="number" id="Pn" placeholder="e.g., 50">
     </div>
 
     <div class="form-group">
         <label for="S">Penetration Strategy:</label>
-        <select id="S">
+        <select id="S" onchange="updatePenetrationField()">
             <option value="4" selected>Sampling</option>
             <option value="3">Rule of Thirds</option>
             <option value="2">Rule of Halves</option>
@@ -201,7 +207,8 @@
 
     <div id="results" class="results">
         <h2 id="res_strategy_title">Results</h2>
-        
+
+        <!-- ── Core gas results ─────────────────────────────────────────── -->
         <div class="result-item">
             <span>Turn Pressure:</span>
             <span class="result-value" id="res_TP">-- BAR</span>
@@ -214,17 +221,18 @@
             <span>Bottom Time:</span>
             <span class="result-value" id="res_Tb">-- min</span>
         </div>
-
-        <div class="result-item" style="background: #d1e3e7; padding: 10px; border-radius: 5px; margin-top: 10px;">
+        <div class="result-item" style="background: #d1e3e7; padding: 10px; border-radius: 5px; margin-top: 6px;">
             <span>Total Usable Gas:</span>
             <span class="result-value" id="res_UG">-- BAR</span>
         </div>
 
+        <!-- ── Gas visualiser ──────────────────────────────────────────── -->
         <div class="chart-container">
             <span class="chart-label">Gas Management Visualiser (BAR)</span>
             <svg id="gasChart" viewBox="0 0 400 110"></svg>
         </div>
 
+        <!-- ── Ascent profile ──────────────────────────────────────────── -->
         <div class="result-item">
             <span>Stop Half Depth:</span>
             <span class="result-value" id="res_Dstop1">-- m</span>
@@ -233,10 +241,19 @@
             <span>Total Ascent Time:</span>
             <span class="result-value" id="res_Tas">-- min</span>
         </div>
-
         <div class="chart-container">
             <span class="chart-label">Ascent profile</span>
             <svg id="ascentChart" viewBox="0 0 400 240"></svg>
+        </div>
+
+        <!-- ── Dive Viability Assessment ───────────────────────────────── -->
+        <div id="viability_section" style="margin-top:16px; padding:14px; border-radius:8px; border:2px solid #ccc;">
+            <strong style="font-size:15px;">Dive Viability</strong>
+            <div id="viability_msg" style="margin-top:8px; font-size:14px;"></div>
+            <div id="working_time_row" style="display:none; margin-top:8px; font-size:14px;">
+                <span>Estimated working time: </span>
+                <strong id="res_Tw">-- min</strong>
+            </div>
         </div>
     </div>
 
@@ -251,23 +268,63 @@
 </div>
 
 <script>
+    // ── Penetration field: enable/disable based on strategy ──────────────────
+    function updatePenetrationField() {
+        const S = parseInt(document.getElementById('S').value);
+        const pnInput = document.getElementById('Pn');
+        const pnLabel = document.getElementById('Pn_label');
+
+        // Strategies 1 (All available Gas) and 2 (Rule of Halves) do not use Pn
+        if (S === 1 || S === 2) {
+            pnInput.disabled = true;
+            pnInput.value = '';
+            pnInput.placeholder = 'Not required for this strategy';
+            pnLabel.style.color = '#aaa';
+        } else {
+            pnInput.disabled = false;
+            pnInput.placeholder = 'e.g., 50';
+            pnLabel.style.color = '';
+        }
+    }
+
+    // Run once on load to set initial state (Sampling is default, so Pn is enabled)
+    updatePenetrationField();
+
+    // ── Main calculation ─────────────────────────────────────────────────────
     function calculateProfile() {
         const Tvol = parseFloat(document.getElementById('Tvol').value);
-        const Fp = parseFloat(document.getElementById('Fp').value);
+        const Fp   = parseFloat(document.getElementById('Fp').value);
         const Dmax = parseFloat(document.getElementById('Dmax').value);
-        const Dad = document.getElementById('Dad').value ? parseFloat(document.getElementById('Dad').value) : Dmax;
-        const Pn = parseFloat(document.getElementById('Pn').value);
-        const S = parseInt(document.getElementById('S').value);
+        const Dad  = document.getElementById('Dad').value ? parseFloat(document.getElementById('Dad').value) : Dmax;
+        const S    = parseInt(document.getElementById('S').value);
 
-        if (!Tvol || !Fp || !Dmax || !Pn) return alert("Please fill all fields.");
+        // Penetration distance: required only for Sampling (4) and Rule of Thirds (3)
+        const pnRaw = document.getElementById('Pn').value;
+        const Pn    = (pnRaw !== '' && !isNaN(parseFloat(pnRaw))) ? parseFloat(pnRaw) : 0;
 
-        const SCR = 20, SCRs = 30, vh = 0.5;
+        // Validation: required fields
+        if (!Tvol || !Fp || !Dmax) {
+            return alert("Please fill all required fields (Tank capacity, Fill pressure, Maximum depth).");
+        }
+        if ((S === 3 || S === 4) && !Pn) {
+            return alert("Penetration distance is required for the Rule of Thirds and Sampling strategies.");
+        }
+        // Validation: average depth cannot exceed maximum depth
+        const DadInput = document.getElementById('Dad').value;
+        if (DadInput !== '' && parseFloat(DadInput) > Dmax) {
+            return alert(
+                "Error: Average bottom depth (" + parseFloat(DadInput) + " m) cannot be greater than " +
+                "maximum depth (" + Dmax + " m).\nPlease enter a valid average depth."
+            );
+        }
+
+        const SCR = 20, SCRs = 30, vh = 0.5, vd = 18; // vd = descent rate m/min
         const Pad = (Dad / 10) + 1;
         const Pav = ((Dmax / 2) / 10) + 1;
         
         let Dstop1 = Math.ceil((Dmax / 2) / 3) * 3;
         let tstop1 = Math.ceil((Dmax - Dstop1) / 9); // Velocity: 9 m/min
-        let Tas = Math.ceil(tstop1 + (Dstop1 / 3)); // Velocity: 3 m/min
+        let Tas    = Math.ceil(tstop1 + (Dstop1 / 3)); // Velocity: 3 m/min
 
         let mG = Math.ceil(((SCRs * Pav * Tas * 2) / Tvol) / 10) * 10;
         let uG = Math.floor(((Fp - mG)) / 10) * 10;
@@ -280,55 +337,127 @@
             TP = Math.ceil(((1/3) * uG + mG + 2 * sG) / 10) * 10;
         }
 
-        let Tb = Math.floor((uG * Tvol) / (SCR * Pad));
+        // Bottom Time: time from start of descent to start of ascent (time to reach Turn Pressure)
+        let Tb = Math.floor(((Fp - TP) * Tvol) / (SCR * Pad));
 
-        document.getElementById('res_TP').innerText = TP + " BAR";
-        document.getElementById('res_MG').innerText = mG + " BAR";
-        document.getElementById('res_Tb').innerText = Tb + " min";
-        document.getElementById('res_UG').innerText = uG + " BAR";
-        document.getElementById('res_Tas').innerText = Tas + " min";
+        // Working Time (Sampling strategy only): Tb - T_descent - T_exit
+        let T_descent = Math.ceil(Dmax / vd);
+        let T_exit    = Math.ceil((Pn / vh) / 60);
+        let T_working = (S === 4) ? Math.max(0, Tb - T_descent - T_exit) : null;
+
+        // ── Viability assessment ──────────────────────────────────────────
+        // Zone classification based on where TP falls relative to mG and Fp
+        let viabilityColor, viabilityText;
+
+        if (TP > Fp || Tb < 0) {
+            // IMPOSSIBLE: TP exceeds tank fill pressure
+            viabilityColor = '#d90429';  // red
+            viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. ' +
+                             'Turn Pressure exceeds fill pressure. ' +
+                             'Use a larger cylinder, higher fill pressure, or reduce penetration distance.';
+        } else if (TP <= mG) {
+            // IMPOSSIBLE: TP falls within or below minimum gas reserve
+            viabilityColor = '#d90429';  // red
+            viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. ' +
+                             'Turn Pressure falls within the minimum gas reserve. ' +
+                             'Use a larger cylinder, higher fill pressure, or reduce penetration distance.';
+        } else {
+            // Calculate inbound gas fraction to determine zone
+            const inboundGas = Fp - TP;   // gas available for penetration
+            const totalUsable = Fp - mG;  // total usable gas
+            const inboundFraction = inboundGas / totalUsable;
+
+            if (inboundFraction >= 0.25) {
+                // GREEN zone: TP well within usable gas — comfortable margin
+                viabilityColor = '#0a9396';  // teal/green
+                viabilityText  = '\u2705\u00A0 Viable dive.';
+            } else {
+                // ORANGE zone: TP close to mG — very little inbound gas
+                viabilityColor = '#ee9b00';  // orange
+                viabilityText  = '\u26A0\uFE0F\u00A0 Viable dive, but very restrictive. ' +
+                                 'Consider a larger cylinder or higher fill pressure.';
+            }
+        }
+
+        // ── Update DOM ───────────────────────────────────────────────────
+        document.getElementById('res_TP').innerText     = TP + " BAR";
+        document.getElementById('res_MG').innerText     = mG + " BAR";
+        document.getElementById('res_Tb').innerText     = Tb + " min";
+        document.getElementById('res_UG').innerText     = uG + " BAR";
+        document.getElementById('res_Tas').innerText    = Tas + " min";
         document.getElementById('res_Dstop1').innerText = Dstop1 + " m";
+
+        // Viability section
+        const viabSection = document.getElementById('viability_section');
+        viabSection.style.borderColor = viabilityColor;
+        viabSection.style.backgroundColor = viabilityColor + '18';  // 10% opacity
+        document.getElementById('viability_msg').style.color = viabilityColor;
+        document.getElementById('viability_msg').innerHTML = viabilityText;
+
+        // Working Time: shown inside viability section for Sampling only
+        const wtRow = document.getElementById('working_time_row');
+        if (S === 4 && T_working !== null) {
+            document.getElementById('res_Tw').innerText = T_working + " min";
+            wtRow.style.display = 'block';
+        } else {
+            wtRow.style.display = 'none';
+        }
+
         document.getElementById('results').style.display = 'block';
 
-        drawGasChart(Fp, TP, mG);
-        drawAscentChart(Dmax, Dstop1, tstop1, Tas);
+        // Only draw charts if dive is geometrically possible
+        if (TP <= Fp && Tb >= 0) {
+            drawGasChart(Fp, TP, mG);
+            drawAscentChart(Dmax, Dstop1, tstop1, Tas);
+        }
     }
 
     function drawGasChart(Fp, TP, MG) {
-        const svg = document.getElementById('gasChart');
-        const width = 400;
-        const scale = width / Fp;
-        const mgWidth = MG * scale;
-        const tpPos = TP * scale;
+        const svg    = document.getElementById('gasChart');
+        const width  = 400;
+        const scale  = width / Fp;
+
+        // Inverted axis: Fp (full tank) on the LEFT, 0 BAR on the RIGHT
+        // Reading left-to-right = entering the cave (consuming gas)
+        // tpPos_inv = x position of Turn Pressure on the inverted axis
+        const tpPos_inv  = (Fp - TP) * scale;   // distance from left edge to TURN marker
+        const mgEnd_inv  = (Fp - MG) * scale;   // distance from left edge to MG boundary
 
         svg.innerHTML = `
-            <text x="0" y="12" font-size="10" font-weight="bold">0 BAR</text>
-            <text x="${width}" y="12" font-size="10" text-anchor="end" font-weight="bold">${Fp} BAR</text>
+            <text x="0" y="12" font-size="10" font-weight="bold">${Fp} BAR</text>
+            <text x="${width}" y="12" font-size="10" text-anchor="end" font-weight="bold">0 BAR</text>
 
+            <!-- Full bar background -->
             <rect x="0" y="40" width="${width}" height="40" fill="#ddd" rx="5" />
-            <rect x="0" y="40" width="${mgWidth}" height="40" fill="var(--warning-color)" rx="5" />
-            <rect x="${mgWidth}" y="40" width="${tpPos - mgWidth}" height="40" fill="var(--reserve-color)" />
-            <rect x="${tpPos}" y="40" width="${width - tpPos}" height="40" fill="var(--secondary-color)" rx="0 5 5 0" />
-            
-            <text x="${tpPos}" y="30" font-size="11" font-weight="bold" text-anchor="middle" fill="var(--primary-color)">▼ TURN: ${TP} BAR</text>
-            
-            <text x="${(tpPos + width)/2}" y="65" font-size="9" text-anchor="middle" fill="white">INBOUND</text>
-            <text x="${(mgWidth + tpPos)/2}" y="65" font-size="9" text-anchor="middle" fill="white">EXIT/SAFETY</text>
+            <!-- INBOUND zone: left side from 0 to tpPos_inv (gas available to use going in) -->
+            <rect x="0" y="40" width="${tpPos_inv}" height="40" fill="var(--secondary-color)" rx="5 0 0 5" />
+            <!-- EXIT/SAFETY zone: from tpPos_inv to mgEnd_inv -->
+            <rect x="${tpPos_inv}" y="40" width="${mgEnd_inv - tpPos_inv}" height="40" fill="var(--reserve-color)" />
+            <!-- Minimum Gas (MG) zone: from mgEnd_inv to right edge -->
+            <rect x="${mgEnd_inv}" y="40" width="${width - mgEnd_inv}" height="40" fill="var(--warning-color)" rx="0 5 5 0" />
+
+            <!-- TURN marker arrow pointing DOWN at tpPos_inv -->
+            <text x="${tpPos_inv}" y="30" font-size="11" font-weight="bold" text-anchor="middle" fill="var(--primary-color)">▼ TURN: ${TP} BAR</text>
+
+            <!-- Zone labels -->
+            <text x="${tpPos_inv / 2}" y="65" font-size="9" text-anchor="middle" fill="white">INBOUND</text>
+            <text x="${(tpPos_inv + mgEnd_inv) / 2}" y="65" font-size="9" text-anchor="middle" fill="white">EXIT/SAFETY</text>
+            <text x="${(mgEnd_inv + width) / 2}" y="65" font-size="8" text-anchor="middle" fill="white">MG</text>
         `;
     }
 
     function drawAscentChart(Dmax, Dstop1, tstop1, Tas) {
-        const svg = document.getElementById('ascentChart');
+        const svg    = document.getElementById('ascentChart');
         const margin = { top: 20, right: 60, bottom: 45, left: 55 };
-        const width = 400 - margin.left - margin.right;
+        const width  = 400 - margin.left - margin.right;
         const height = 240 - margin.top - margin.bottom;
 
         const xScale = width / Tas;
         const yScale = height / Dmax;
 
-        const p1 = { x: 0, y: height };
+        const p1 = { x: 0,               y: height };
         const p2 = { x: tstop1 * xScale, y: (Dmax - Dstop1) * yScale };
-        const p3 = { x: Tas * xScale, y: 0 };
+        const p3 = { x: Tas * xScale,    y: 0 };
 
         svg.innerHTML = `
             <g transform="translate(${margin.left}, ${margin.top})">

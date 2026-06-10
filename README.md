@@ -12,8 +12,8 @@ The following parameters are required to generate a dive profile:
 
 | Variable | Definition | Unit |
 | :--- | :--- | :--- |
-| **Tvol** | Tank capacity / internal volume. | Litres |
-| **Fp** | Fill pressure of the tank before the dive. | BAR |
+| **Tvol** | Cylinder capacity / internal volume. | Litres |
+| **Fp** | Fill pressure of the cylinder before the dive. | BAR |
 | **Dmax** | Maximum depth of the dive. | Metres (m) |
 | **Dad** | Average bottom depth. Defaults to **Dmax** for maximum conservatism if unknown. | Metres (m) |
 | **Pn** | Penetration distance (the furthest linear distance into the cave). | Metres (m) |
@@ -26,27 +26,29 @@ These values are established to ensure a high safety margin during scientific op
 | **SCR** | Standard Surface Consumption Rate (relaxed breathing). | 20 L/min |
 | **SCRs** | Stressed Surface Consumption Rate (emergency/panic breathing). | 30 L/min |
 | **vh** | Cave exit swimming speed. | 0.5 m/s |
+| **vd** | Descent rate. Standard recreational/technical reference value. |18 m/s |
 
 ### Output Metrics
 Results provided for the execution of the dive plan:
 
-| Variable | Definition | Unit |
+| Variable | Definition | Unit | Strategies
 | :--- | :--- | :--- |
-| **Stop Half Depth** | The halfway depth where ascent speed transitions from 9 m/min to 3 m/min. | Metres (m) |
-| **MG** | Minimum Gas. The absolute reserve required for two divers to safely ascend. | BAR |
-| **UG** | Usable Gas. Total gas available before touching the minimum reserve. | BAR |
-| **TP** | Turn Pressure. The gauge pressure at which the diver must exit. | BAR |
-| **Tb** | Bottom Time. Maximum time allowed before starting ascent. | Minutes (min) |
-| **Tas** | Total Ascent Time from starting ascent to the surface. | Minutes (min) |
+| **Stop Half Depth** | The halfway depth where ascent speed transitions from 9 m/min to 3 m/min. | Metres (m) | All |
+| **MG** | Minimum Gas. The absolute reserve required for two divers to safely ascend. | BAR | All |
+| **UG** | Usable Gas. Total gas available before touching the minimum reserve. | BAR | All |
+| **TP** | Turn Pressure. The gauge pressure at which the diver must exit. | BAR | All |
+| **Tb** | Bottom Time. Maximum time allowed before starting ascent. | Minutes (min) | All |
+| **Tw** |Working Time. Effective sampling time inside the cave, after subtracting descent and exit travel times from Bottom Time. | Minutes (min) | Sampling only |
+| **Tas** | Total Ascent Time from starting ascent to the surface. | Minutes (min) | All |
 
 ---
 
 ## 2. Penetration Strategies
 
-* **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments.** Suitable to not overhead environments.
-* **Strategy 2 (Rule of Halves):** 50% for the first leg, 50% for the return leg. **Not suitable for cave diving.** Suitable to not overhead environments.
-* **Strategy 3 (Rule of Thirds):** Standard cave protocol (1/3 in, 1/3 out, 1/3 reserve). Assumes equal speeds.
-* **Strategy 4 (Sampling):** Specifically for scientific diving. It accounts for slow penetration (sampling) and faster emergency exits. It calculates turn pressure based on distance and emergency scenarios.
+* **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments.** No suitable for overhead environments.
+* **Strategy 2 (Rule of Halves):** 50% for the first leg, 50% for the return leg. **Not suitable for cave diving.** No suitable for overhead environments.
+* **Strategy 3 (Rule of Thirds):** Standard cave protocol (1/3 in, 1/3 out, 1/3 reserve). Assumes equal inbound and outbound speeds
+* **Strategy 4 (Sampling):** Specifically designed for scientific cave diving. Accounts for slow inbound penetration (data collection) and faster direct exit. Calculates Turn Pressure based on actual exit distance and emergency gas-sharing scenarios, and provides Working Time to estimate effective sampling duration.
 
 ---
 
@@ -83,6 +85,24 @@ For **Strategy 4 (Sampling)**, $TP$ accounts for the specific exit requirements:
 2. **Turn Pressure:**
     $$TP = \lceil \frac{1}{3}UG + MG + 2 \times sG \rceil_{10}$$
     *This ensures enough gas for an emergency for two divers sharing gas at the furthest point.*
+
+### 3.5. Bottom Time ($T_b$) and Working Time ($T_w$)
+
+**Bottom Time** is defined as the time elapsed from the start of descent until the diver reaches the Turn Pressure. It is the operationally relevant time for decompression table calculations and is consistent across all four strategies:
+
+$$T_b = \left\lfloor \frac{(F_p - TP) \times T_{vol}}{SCR \times P_{ad}} \right\rfloor$$
+
+**Working Time** (Strategy 4 only) is the effective time available for sampling inside the cave, after subtracting the time required to descend to depth and to exit from the point of maximum penetration:
+
+$$T_w = \max\left(0,\ T_b - T_{descent} - T_{exit}\right)$$
+
+Where:
+* $T_{descent} = \lceil D_{max} / v_d \rceil$ — time to descend to maximum depth at $v_d = 18$ m/min.
+* $T_{exit} = \lceil (P_n / v_h) / 60 \rceil$ — time to swim from maximum penetration to the cave entrance at exit speed $v_h$.
+
+A Working Time of 0 indicates that the dive profile is operationally marginal — the cylinder size or fill pressure should be increased, or the penetration distance reduced.
+
+
 
 ---
 
