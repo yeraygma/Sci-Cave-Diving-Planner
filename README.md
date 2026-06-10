@@ -31,8 +31,8 @@ These values are established to ensure a high safety margin during scientific op
 ### Output Metrics
 Results provided for the execution of the dive plan:
 
-| Variable | Definition | Unit | Strategies
-| :--- | :--- | :--- |
+| Variable | Definition | Unit | Strategies |
+| :--- | :--- | :--- | :--- |
 | **Stop Half Depth** | The halfway depth where ascent speed transitions from 9 m/min to 3 m/min. | Metres (m) | All |
 | **MG** | Minimum Gas. The absolute reserve required for two divers to safely ascend. | BAR | All |
 | **UG** | Usable Gas. Total gas available before touching the minimum reserve. | BAR | All |
