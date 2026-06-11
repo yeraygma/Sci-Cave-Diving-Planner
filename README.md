@@ -3,7 +3,7 @@
 
 A robust, conservative gas management dive planning tool designed specifically for scientific cave diving operations. Decompression calculations for each dive must be supplemented with these calculations. This project provides both an R script (`bt_S4_Eng.R`) and a standalone Web App (`.html`) to calculate critical gas management metrics, ascent profiles, and turn pressures.
 
-It is specifically tailored for scenarios where penetration speeds are significantly slower than exit speeds due to sampling or scientific data collection tasks (Strategy 4, sampling).
+It is specifically tailored for scenarios where penetration speeds are significantly slower than exit speeds due to sampling or scientific data collection tasks (Strategy 4, Cave sampling).
 
 ## 1. Variables Dictionary
 
@@ -38,7 +38,7 @@ Results provided for the execution of the dive plan:
 | **UG** | Usable Gas. Total gas available before touching the minimum reserve. | BAR | All |
 | **TP** | Turn Pressure. The gauge pressure at which the diver must exit. | BAR | All |
 | **Tb** | Bottom Time. Maximum time allowed before starting ascent. | Minutes (min) | All |
-| **Tw** |Working Time. Effective sampling time inside the cave, after subtracting descent and exit travel times from Bottom Time. | Minutes (min) | Sampling only |
+| **Tw** |Working Time. Effective sampling time inside the cave, after subtracting descent and exit travel times from Bottom Time. | Minutes (min) | Cave sampling only |
 | **Tas** | Total Ascent Time from starting ascent to the surface. | Minutes (min) | All |
 
 ---
@@ -48,7 +48,7 @@ Results provided for the execution of the dive plan:
 * **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments.** No suitable for overhead environments.
 * **Strategy 2 (Rule of Halves):** 50% for the first leg, 50% for the return leg. **Not suitable for cave diving.** No suitable for overhead environments.
 * **Strategy 3 (Rule of Thirds):** Standard cave protocol (1/3 in, 1/3 out, 1/3 reserve). Assumes equal inbound and outbound speeds
-* **Strategy 4 (Sampling):** Specifically designed for scientific cave diving. Accounts for slow inbound penetration (data collection) and faster direct exit. Calculates Turn Pressure based on actual exit distance and emergency gas-sharing scenarios, and provides Working Time to estimate effective sampling duration.
+* **Strategy 4 (Cave sampling):** Specifically designed for scientific cave diving. Accounts for slow inbound penetration (data collection) and faster direct exit. Calculates Turn Pressure based on actual exit distance and emergency gas-sharing scenarios, and provides Working Time to estimate effective sampling duration.
 
 ---
 
@@ -79,7 +79,7 @@ $$D_{shd} = \lceil (D_{max} / 2) / 3 \rceil \times 3$$
     *Rounded down to the nearest 10 BAR.*
 
 ### 3.4. Turn Pressure ($TP$) Logic
-For **Strategy 4 (Sampling)**, $TP$ accounts for the specific exit requirements:
+For **Strategy 4 (Cave sampling)**, $TP$ accounts for the specific exit requirements:
 1. **Exit Gas Consumption ($sG$):** Gas for two divers to swim distance $P_n$ at speed $v_h$.
     $$sG = \frac{ \left(\frac{P_n}{v_h \times 60}\right) \times SCR_s \times P_{ad} }{T_{vol}}$$
 2. **Turn Pressure:**
@@ -105,7 +105,7 @@ A Working Time of 0 indicates that the dive profile is operationally marginal â€
 
 ### 3.6. Dive Viability Assessment
 
-After computing the Turn Pressure and Bottom Time, the planner automatically evaluates whether the planned profile is operationally viable. The assessment applies three sequential checks, in order of severity. Checks 2 and 3 apply only to confined-environment strategies (Rule of Thirds and Sampling); they are not applied to Strategies 1 and 2, which are designed for open-water dives where no cave penetration is involved.
+After computing the Turn Pressure and Bottom Time, the planner automatically evaluates whether the planned profile is operationally viable. The assessment applies three sequential checks, in order of severity. Checks 2 and 3 apply only to confined-environment strategies (Rule of Thirds and Cave sampling); they are not applied to Strategies 1 and 2, which are designed for open-water dives where no cave penetration is involved.
 
 **Check 1 â€” Turn Pressure exceeds fill pressure ($TP > F_p$):**
 The computed Turn Pressure is greater than the available gas. This occurs when the penetration distance or depth is too large for the cylinder size and fill pressure. The profile is **not viable** regardless of strategy.
@@ -132,7 +132,7 @@ The 25% threshold for the inbound gas fraction is defined as:
 
 $$\text{Inbound fraction} = \frac{F_p - TP}{F_p - MG}$$
 
-When this fraction falls below 0.25, the diver has less than one quarter of the usable gas available for the inbound phase, which is operationally insufficient for meaningful scientific sampling.
+When this fraction falls below 0.25, the diver has less than one quarter of the usable gas available for the inbound phase, which is operationally insufficient for meaningful scientific cave sampling.
 
 
 ---
