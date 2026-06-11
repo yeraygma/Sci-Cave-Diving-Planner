@@ -103,6 +103,37 @@ Where:
 A Working Time of 0 indicates that the dive profile is operationally marginal — the cylinder size or fill pressure should be increased, or the penetration distance reduced.
 
 
+### 3.6. Dive Viability Assessment
+
+After computing the Turn Pressure and Bottom Time, the planner automatically evaluates whether the planned profile is operationally viable. The assessment applies three sequential checks, in order of severity. Checks 2 and 3 apply only to confined-environment strategies (Rule of Thirds and Sampling); they are not applied to Strategies 1 and 2, which are designed for open-water dives where no cave penetration is involved.
+
+**Check 1 — Turn Pressure exceeds fill pressure ($TP > F_p$):**
+The computed Turn Pressure is greater than the available gas. This occurs when the penetration distance or depth is too large for the cylinder size and fill pressure. The profile is **not viable** regardless of strategy.
+
+**Check 2 — Turn Pressure within minimum gas reserve ($TP \leq MG$, Strategies 3–4 only):**
+The Turn Pressure falls at or below the emergency ascent reserve. There is no usable inbound gas. The profile is **not viable**.
+
+**Check 3 — Descent gas exceeds inbound gas ($G_{descent} \geq F_p - TP$, Strategies 3–4 only):**
+The gas consumed during the descent to maximum depth equals or exceeds the gas available for the inbound phase. The diver would reach Turn Pressure before arriving at the bottom of the cave, making sampling impossible. This is the most operationally relevant check for deep caves with large penetration distances.
+
+$$G_{descent} = \frac{SCR \times P_{ad} \times T_{descent}}{T_{vol}}$$
+
+If $G_{descent} \geq (F_p - TP)$, the profile is **not viable**.
+
+**Viability classification:**
+
+| Verdict | Condition | Recommended action |
+| :--- | :--- | :--- |
+| ✅ **Viable** | All checks pass and inbound gas fraction $\geq$ 25% of usable gas | Proceed with the planned profile |
+| ⚠️ **Viable, but very restrictive** | All checks pass but inbound gas fraction $<$ 25% of usable gas | Consider a larger cylinder or higher fill pressure |
+| ❌ **Not viable** | Any of the three checks above fails | Do not attempt this profile with the current equipment |
+
+The 25% threshold for the inbound gas fraction is defined as:
+
+$$\text{Inbound fraction} = \frac{F_p - TP}{F_p - MG}$$
+
+When this fraction falls below 0.25, the diver has less than one quarter of the usable gas available for the inbound phase, which is operationally insufficient for meaningful scientific sampling.
+
 
 ---
 

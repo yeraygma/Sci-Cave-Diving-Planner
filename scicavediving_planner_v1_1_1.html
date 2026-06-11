@@ -196,7 +196,7 @@
     <div class="form-group">
         <label for="S">Penetration Strategy:</label>
         <select id="S" onchange="updatePenetrationField()">
-            <option value="4" selected>Sampling</option>
+            <option value="4" selected>Cave Sampling</option>
             <option value="3">Rule of Thirds</option>
             <option value="2">Rule of Halves</option>
             <option value="1">All available Gas</option>
@@ -210,7 +210,7 @@
 
         <!-- ── Core gas results ─────────────────────────────────────────── -->
         <div class="result-item">
-            <span>Turn Pressure:</span>
+            <span id="tp_label">Turn Pressure:</span>
             <span class="result-value" id="res_TP">-- BAR</span>
         </div>
         <div class="result-item">
@@ -287,7 +287,7 @@
         }
     }
 
-    // Run once on load to set initial state (Sampling is default, so Pn is enabled)
+    // Run once on load to set initial state (Cave sampling is default, so Pn is enabled)
     updatePenetrationField();
 
     // ── Main calculation ─────────────────────────────────────────────────────
@@ -298,7 +298,7 @@
         const Dad  = document.getElementById('Dad').value ? parseFloat(document.getElementById('Dad').value) : Dmax;
         const S    = parseInt(document.getElementById('S').value);
 
-        // Penetration distance: required only for Sampling (4) and Rule of Thirds (3)
+        // Penetration distance: required only for Cave sampling (4) and Rule of Thirds (3)
         const pnRaw = document.getElementById('Pn').value;
         const Pn    = (pnRaw !== '' && !isNaN(parseFloat(pnRaw))) ? parseFloat(pnRaw) : 0;
 
@@ -307,7 +307,7 @@
             return alert("Please fill all required fields (Tank capacity, Fill pressure, Maximum depth).");
         }
         if ((S === 3 || S === 4) && !Pn) {
-            return alert("Penetration distance is required for the Rule of Thirds and Sampling strategies.");
+            return alert("Penetration distance is required for the Rule of Thirds and Cave sampling strategies.");
         }
         // Validation: average depth cannot exceed maximum depth
         const DadInput = document.getElementById('Dad').value;
@@ -340,49 +340,63 @@
         // Bottom Time: time from start of descent to start of ascent (time to reach Turn Pressure)
         let Tb = Math.floor(((Fp - TP) * Tvol) / (SCR * Pad));
 
-        // Working Time (Sampling strategy only): Tb - T_descent - T_exit
+        // Working Time (Cave sampling strategy only): Tb - T_descent - T_exit
         let T_descent = Math.ceil(Dmax / vd);
         let T_exit    = Math.ceil((Pn / vh) / 60);
         let T_working = (S === 4) ? Math.max(0, Tb - T_descent - T_exit) : null;
 
         // ── Viability assessment ──────────────────────────────────────────
-        // Zone classification based on where TP falls relative to mG and Fp
-        let viabilityColor, viabilityText;
+        // Option A: include descent gas consumption in viability check.
+        // If the gas consumed during descent exceeds the inbound gas available,
+        // the diver would reach Turn Pressure before reaching the bottom.
+        const gas_descent_bar = (SCR * Pad * T_descent) / Tvol; // BAR consumed descending
+        const inboundGas      = Fp - TP;   // gas available for inbound phase
+        const totalUsable     = Fp - mG;   // total usable gas
+        const inboundFraction = inboundGas / totalUsable;
+
+        let viabilityColor, viabilityText, isImpossible = false;
 
         if (TP > Fp || Tb < 0) {
-            // IMPOSSIBLE: TP exceeds tank fill pressure
-            viabilityColor = '#d90429';  // red
+            isImpossible   = true;
+            viabilityColor = '#d90429';
             viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. ' +
                              'Turn Pressure exceeds fill pressure. ' +
                              'Use a larger cylinder, higher fill pressure, or reduce penetration distance.';
-        } else if (TP <= mG) {
-            // IMPOSSIBLE: TP falls within or below minimum gas reserve
-            viabilityColor = '#d90429';  // red
+        } else if (S >= 3 && TP <= mG) {
+            // IMPOSSIBLE for S=3 and S=4 only.
+            // For S=1, TP = MG by design (all usable gas consumed) — not an error.
+            isImpossible   = true;
+            viabilityColor = '#d90429';
             viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. ' +
                              'Turn Pressure falls within the minimum gas reserve. ' +
                              'Use a larger cylinder, higher fill pressure, or reduce penetration distance.';
+        } else if (S >= 3 && gas_descent_bar >= inboundGas) {
+            // IMPOSSIBLE for S=3 and S=4 only: gas consumed during descent >= inbound gas.
+            // S=1 and S=2 are open-water strategies — descent gas check does not apply.
+            isImpossible   = true;
+            viabilityColor = '#d90429';
+            viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. ' +
+                             'The gas consumed during descent (' + gas_descent_bar.toFixed(1) + ' BAR) ' +
+                             'equals or exceeds the inbound gas available (' + inboundGas.toFixed(1) + ' BAR). ' +
+                             'The diver would reach Turn Pressure before reaching the bottom. ' +
+                             'Use a larger cylinder, higher fill pressure, or reduce depth/penetration.';
+        } else if (S <= 2 || inboundFraction >= 0.25) {
+            // S=1 and S=2: always viable if TP <= Fp (open-water strategies, no cave penetration check)
+            viabilityColor = '#0a9396';
+            viabilityText  = '\u2705\u00A0 Viable dive.';
         } else {
-            // Calculate inbound gas fraction to determine zone
-            const inboundGas = Fp - TP;   // gas available for penetration
-            const totalUsable = Fp - mG;  // total usable gas
-            const inboundFraction = inboundGas / totalUsable;
-
-            if (inboundFraction >= 0.25) {
-                // GREEN zone: TP well within usable gas — comfortable margin
-                viabilityColor = '#0a9396';  // teal/green
-                viabilityText  = '\u2705\u00A0 Viable dive.';
-            } else {
-                // ORANGE zone: TP close to mG — very little inbound gas
-                viabilityColor = '#ee9b00';  // orange
-                viabilityText  = '\u26A0\uFE0F\u00A0 Viable dive, but very restrictive. ' +
-                                 'Consider a larger cylinder or higher fill pressure.';
-            }
+            viabilityColor = '#ee9b00';
+            viabilityText  = '\u26A0\uFE0F\u00A0 Viable dive, but very restrictive. ' +
+                             'Consider a larger cylinder or higher fill pressure.';
         }
 
         // ── Update DOM ───────────────────────────────────────────────────
-        document.getElementById('res_TP').innerText     = TP + " BAR";
+        // For S=1 (All Available Gas): hide Turn Pressure value; label stays as-is
+        document.getElementById('res_TP').innerText = (S === 1) ? '' : TP + ' BAR';
         document.getElementById('res_MG').innerText     = mG + " BAR";
-        document.getElementById('res_Tb').innerText     = Tb + " min";
+        // Bottom Time: show INVIABLE DIVE when profile is impossible
+        document.getElementById('res_Tb').innerText     = isImpossible ? 'INVIABLE DIVE' : Tb + " min";
+        document.getElementById('res_Tb').style.color   = isImpossible ? '#d90429' : '';
         document.getElementById('res_UG').innerText     = uG + " BAR";
         document.getElementById('res_Tas').innerText    = Tas + " min";
         document.getElementById('res_Dstop1').innerText = Dstop1 + " m";
@@ -390,13 +404,13 @@
         // Viability section
         const viabSection = document.getElementById('viability_section');
         viabSection.style.borderColor = viabilityColor;
-        viabSection.style.backgroundColor = viabilityColor + '18';  // 10% opacity
+        viabSection.style.backgroundColor = viabilityColor + '18';
         document.getElementById('viability_msg').style.color = viabilityColor;
         document.getElementById('viability_msg').innerHTML = viabilityText;
 
-        // Working Time: shown inside viability section for Sampling only
+        // Working Time: shown inside viability section for Cave sampling only (not when impossible)
         const wtRow = document.getElementById('working_time_row');
-        if (S === 4 && T_working !== null) {
+        if (S === 4 && T_working !== null && !isImpossible) {
             document.getElementById('res_Tw').innerText = T_working + " min";
             wtRow.style.display = 'block';
         } else {
@@ -405,14 +419,35 @@
 
         document.getElementById('results').style.display = 'block';
 
-        // Only draw charts if dive is geometrically possible
-        if (TP <= Fp && Tb >= 0) {
-            drawGasChart(Fp, TP, mG);
+        // Gas chart: full red bar when impossible, normal when viable
+        if (isImpossible) {
+            drawGasChartImpossible(Fp, mG);
+        } else {
+            // S=1: label the marker as ASCENT instead of TURN
+            drawGasChart(Fp, TP, mG, S === 1 ? 'ASCENT' : 'TURN');
+        }
+        // Ascent chart: only draw when the dive is viable
+        if (!isImpossible) {
             drawAscentChart(Dmax, Dstop1, tstop1, Tas);
+        } else {
+            // Clear the ascent chart SVG when dive is not viable
+            document.getElementById('ascentChart').innerHTML = '';
         }
     }
 
-    function drawGasChart(Fp, TP, MG) {
+    function drawGasChartImpossible(Fp, MG) {
+        // Full red bar: shown when the dive profile is not viable
+        const svg   = document.getElementById('gasChart');
+        const width = 400;
+        svg.innerHTML = `
+            <text x="0" y="12" font-size="10" font-weight="bold">${Fp} BAR</text>
+            <text x="${width}" y="12" font-size="10" text-anchor="end" font-weight="bold">0 BAR</text>
+            <rect x="0" y="40" width="${width}" height="40" fill="var(--warning-color)" rx="5" />
+            <text x="${width/2}" y="65" font-size="12" font-weight="bold" text-anchor="middle" fill="white">INVIABLE DIVE</text>
+        `;
+    }
+
+    function drawGasChart(Fp, TP, MG, markerLabel = 'TURN') {
         const svg    = document.getElementById('gasChart');
         const width  = 400;
         const scale  = width / Fp;
@@ -436,8 +471,8 @@
             <!-- Minimum Gas (MG) zone: from mgEnd_inv to right edge -->
             <rect x="${mgEnd_inv}" y="40" width="${width - mgEnd_inv}" height="40" fill="var(--warning-color)" rx="0 5 5 0" />
 
-            <!-- TURN marker arrow pointing DOWN at tpPos_inv -->
-            <text x="${tpPos_inv}" y="30" font-size="11" font-weight="bold" text-anchor="middle" fill="var(--primary-color)">▼ TURN: ${TP} BAR</text>
+            <!-- TURN / ASCENT marker arrow pointing DOWN at tpPos_inv -->
+            <text x="${tpPos_inv}" y="30" font-size="11" font-weight="bold" text-anchor="middle" fill="var(--primary-color)">▼ ${markerLabel}: ${TP} BAR</text>
 
             <!-- Zone labels -->
             <text x="${tpPos_inv / 2}" y="65" font-size="9" text-anchor="middle" fill="white">INBOUND</text>
