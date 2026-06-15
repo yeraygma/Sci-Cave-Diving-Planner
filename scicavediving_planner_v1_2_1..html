@@ -1,0 +1,554 @@
+Aquí tienes el archivo HTML completo (`scicavediving_planner_v1_1_1.html`). Incorpora la lógica condicional de GUE para la estrategia de los tercios, el rediseño simétrico de los bloques gráficos del visualizador de gas, el cambio de etiqueta a "DIVING" para la primera estrategia y la corrección geométrica de la flecha del `TURN` / `ASCENT` para que caiga milimétricamente en la separación de los componentes.
+
+```html
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sci Cave Diving Planner</title>
+    <style>
+        :root {
+            --primary-color: #005f73;
+            --secondary-color: #0a9396;
+            --accent-color: #94d2bd;
+            --warning-color: #d90429;
+            --reserve-color: #ee9b00;
+            --bg-color: #f4f4f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --font-title: 22px;
+            --font-subtitle: 18px;
+            --font-body: 16px;
+            --font-small: 14px;
+            --font-disclaimer: 11px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            font-size: var(--font-body);
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: var(--font-title);
+            text-align: center;
+            margin-top: 0;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            font-size: var(--font-subtitle);
+            color: var(--primary-color);
+            margin-top: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: var(--font-body);
+            box-sizing: border-box;
+            background-color: white;
+        }
+
+        input[type="number"]:disabled {
+            background-color: #e9ecef;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: var(--font-subtitle);
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .results {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .viability-section {
+            padding: 12px;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        #viability_msg {
+            margin: 0 0 10px 0;
+            font-size: var(--font-body);
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-value {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .chart-container {
+            margin: 20px 0;
+            text-align: center;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .chart-label {
+            font-size: var(--font-small);
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+            color: var(--primary-color);
+        }
+
+        svg {
+            width: 100%;
+            border-radius: 4px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            font-size: var(--font-small);
+            text-align: center;
+            color: #666;
+        }
+
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .disclaimer {
+            margin-top: 20px;
+            font-size: var(--font-disclaimer);
+            color: #888;
+            line-height: 1.4;
+            text-align: justify;
+            border: 1px solid #eee;
+            padding: 12px;
+            border-radius: 4px;
+            background-color: #fafafa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Sci Cave Diving Planner</h1>
+
+    <div class="form-group">
+        <label for="Tvol">Tank capacity (litres):</label>
+        <input type="number" id="Tvol" value="15">
+    </div>
+
+    <div class="form-group">
+        <label for="Fp">Fill pressure (BAR):</label>
+        <input type="number" id="Fp" value="200">
+    </div>
+
+    <div class="form-group">
+        <label for="Dmax">Maximum depth (metres):</label>
+        <input type="number" id="Dmax" placeholder="e.g., 20">
+    </div>
+
+    <div class="form-group">
+        <label for="Dad">Average bottom depth (metres):</label>
+        <input type="number" id="Dad" placeholder="If unknown, use max depth">
+    </div>
+
+    <div class="form-group">
+        <label for="Pn" id="Pn_label">Maximum penetration distance (metres):</label>
+        <input type="number" id="Pn" placeholder="e.g., 50">
+    </div>
+
+    <div class="form-group">
+        <label for="S">Penetration Strategy:</label>
+        <select id="S" onchange="updatePenetrationField()">
+            <option value="4" selected>Cave Sampling</option>
+            <option value="3">Rule of Thirds</option>
+            <option value="2">Rule of Halves</option>
+            <option value="1">All Available Gas</option>
+        </select>
+    </div>
+
+    <button onclick="calculateProfile()">Calculate Profile</button>
+
+    <div id="results" class="results">
+        <div id="viability_section" class="viability-section">
+            <div id="viability_msg"></div>
+            <div id="working_time_row" class="result-item" style="border-bottom: none; display: none;">
+                <span>Working Time (Cave sampling):</span>
+                <span class="result-value" id="res_Tw" style="color: var(--text-color);">-- min</span>
+            </div>
+        </div>
+
+        <div class="result-item">
+            <span>Turn Pressure:</span>
+            <span class="result-value" id="res_TP">-- BAR</span>
+        </div>
+        <div class="result-item">
+            <span>Minimum Gas (Reserve):</span>
+            <span class="result-value" id="res_MG">-- BAR</span>
+        </div>
+        <div class="result-item">
+            <span>Bottom Time:</span>
+            <span class="result-value" id="res_Tb">-- min</span>
+        </div>
+
+        <div class="result-item" style="background: #d1e3e7; padding: 10px; border-radius: 5px; margin-top: 10px;">
+            <span>Total Usable Gas:</span>
+            <span class="result-value" id="res_UG">-- BAR</span>
+        </div>
+
+        <div class="chart-container">
+            <span class="chart-label">Gas Management Visualiser (BAR)</span>
+            <svg id="gasChart" viewBox="0 0 400 115"></svg>
+        </div>
+
+        <div class="result-item">
+            <span>Stop Half Depth:</span>
+            <span class="result-value" id="res_Dstop1">-- m</span>
+        </div>
+        <div class="result-item">
+            <span>Total Ascent Time:</span>
+            <span class="result-value" id="res_Tas">-- min</span>
+        </div>
+
+        <div class="chart-container">
+            <span class="chart-label">Ascent Profile</span>
+            <svg id="ascentChart" viewBox="0 0 400 240"></svg>
+        </div>
+    </div>
+
+    <div class="footer">
+        Developed by <strong>Yeray Gonzalez-Marrero</strong><br>
+        Open Source Project: <a href="https://github.com/yeraygma/Sci-Cave-Diving-Planner" target="_blank">GitHub Repository</a>
+    </div>
+
+    <div class="disclaimer">
+        <strong>Disclaimer:</strong> This tool is provided "as is". User assumes all risk. Verify with decompression tables.
+    </div>
+</div>
+
+<script>
+    function updatePenetrationField() {
+        const S = parseInt(document.getElementById('S').value);
+        const pnInput = document.getElementById('Pn');
+        const pnLabel = document.getElementById('Pn_label');
+
+        if (S === 1 || S === 2) {
+            pnInput.disabled = true;
+            pnInput.value = '';
+            pnInput.placeholder = 'Not required for this strategy';
+            pnLabel.style.color = '#aaa';
+        } else {
+            pnInput.disabled = false;
+            pnInput.placeholder = 'e.g., 50';
+            pnLabel.style.color = '';
+        }
+    }
+
+    updatePenetrationField();
+
+    function calculateProfile() {
+        const Tvol = parseFloat(document.getElementById('Tvol').value);
+        const Fp   = parseFloat(document.getElementById('Fp').value);
+        const Dmax = parseFloat(document.getElementById('Dmax').value);
+        const Dad  = document.getElementById('Dad').value ? parseFloat(document.getElementById('Dad').value) : Dmax;
+        const S    = parseInt(document.getElementById('S').value);
+
+        const pnRaw = document.getElementById('Pn').value;
+        const Pn    = (pnRaw !== '' && !isNaN(parseFloat(pnRaw))) ? parseFloat(pnRaw) : 0;
+
+        if (!Tvol || !Fp || !Dmax) {
+            return alert("Please fill all required fields (Cylinder capacity, Fill pressure, Maximum depth).");
+        }
+        if ((S === 3 || S === 4) && !Pn) {
+            return alert("Penetration distance is required for the Rule of Thirds and Cave sampling strategies.");
+        }
+        const DadInput = document.getElementById('Dad').value;
+        if (DadInput !== '' && parseFloat(DadInput) > Dmax) {
+            return alert(
+                "Error: Average bottom depth (" + parseFloat(DadInput) + " m) cannot be greater than " +
+                "maximum depth (" + Dmax + " m).\nPlease enter a valid average depth."
+            );
+        }
+
+        const SCR = 20, SCRs = 30, vh = 0.5, vd = 18; 
+        const Pad = (Dad / 10) + 1;
+        const Pav = ((Dmax / 2) / 10) + 1;
+        
+        let Dstop1 = Math.ceil((Dmax / 2) / 3) * 3;
+        let tstop1 = Math.ceil((Dmax - Dstop1) / 9); 
+        let Tas    = Math.ceil(tstop1 + (Dstop1 / 3)); 
+
+        let mG = Math.ceil(((SCRs * Pav * Tas * 2) / Tvol) / 10) * 10;
+        let uG = Math.floor(((Fp - mG)) / 10) * 10;
+
+        let TP;
+        let sG = 0;
+        if (S === 1 || S === 2) {
+            TP = Math.ceil((Fp - (uG / S)) / 10) * 10;
+        } else if (S === 3) {
+            let tercio_Fp = Fp / 3;
+            if (tercio_Fp >= mG) {
+                TP = Math.ceil((Fp - tercio_Fp) / 10) * 10;
+            } else {
+                TP = Math.ceil((Fp - ((Fp - mG) / 2)) / 10) * 10;
+            }
+        } else if (S === 4) {
+            sG = (((Pn / vh) / 60) * SCRs * Pad) / Tvol;
+            TP = Math.ceil(((1/3) * uG + mG + 2 * sG) / 10) * 10;
+        }
+
+        let Tb = Math.floor(((Fp - TP) * Tvol) / (SCR * Pad));
+
+        let T_descent = Math.ceil(Dmax / vd);
+        let T_exit    = Math.ceil((Pn / vh) / 60);
+        let T_working = (S === 4) ? Math.max(0, Tb - T_descent - T_exit) : null;
+
+        const gas_descent_bar = (SCR * Pad * T_descent) / Tvol; 
+        const inboundGas      = Fp - TP;   
+        const totalUsable     = Fp - mG;   
+        const inboundFraction = inboundGas / totalUsable;
+
+        let viabilityColor, viabilityText, isImpossible = false;
+
+        if (TP > Fp || Tb < 0) {
+            isImpossible   = true;
+            viabilityColor = '#d90429';
+            viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. Turn Pressure exceeds fill pressure.';
+        } else if (S >= 3 && TP <= mG) {
+            isImpossible   = true;
+            viabilityColor = '#d90429';
+            viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. Turn Pressure falls within the minimum gas reserve.';
+        } else if (S >= 3 && gas_descent_bar >= inboundGas) {
+            isImpossible   = true;
+            viabilityColor = '#d90429';
+            viabilityText  = '\u274C\u00A0 Dive not viable with this equipment. The gas consumed during descent equals or exceeds the inbound gas available.';
+        } else if (S <= 2 || inboundFraction >= 0.25) {
+            viabilityColor = '#0a9396';
+            viabilityText  = '\u2705\u00A0 Viable dive.';
+        } else {
+            viabilityColor = '#ee9b00';
+            viabilityText  = '\u26A0\uFE0F\u00A0 Viable dive, but very restrictive. Consider a larger cylinder or higher fill pressure.';
+        }
+
+        document.getElementById('res_TP').innerText = (S === 1) ? '' : TP + ' BAR';
+        document.getElementById('res_MG').innerText     = mG + " BAR";
+        document.getElementById('res_Tb').innerText     = isImpossible ? 'INVIABLE DIVE' : Tb + " min";
+        document.getElementById('res_Tb').style.color   = isImpossible ? '#d90429' : '';
+        document.getElementById('res_UG').innerText     = uG + " BAR";
+        document.getElementById('res_Tas').innerText    = Tas + " min";
+        document.getElementById('res_Dstop1').innerText = Dstop1 + " m";
+
+        const viabSection = document.getElementById('viability_section');
+        viabSection.style.borderColor = viabilityColor;
+        viabSection.style.backgroundColor = viabilityColor + '18';
+        document.getElementById('viability_msg').style.color = viabilityColor;
+        document.getElementById('viability_msg').innerHTML = viabilityText;
+
+        const wtRow = document.getElementById('working_time_row');
+        if (S === 4 && T_working !== null && !isImpossible) {
+            document.getElementById('res_Tw').innerText = T_working + " min";
+            wtRow.style.display = 'block';
+        } else {
+            wtRow.style.display = 'none';
+        }
+
+        document.getElementById('results').style.display = 'block';
+
+        if (isImpossible) {
+            drawGasChartImpossible(Fp, mG);
+        } else {
+            drawGasChart(Fp, TP, mG, S, sG);
+        }
+
+        if (!isImpossible) {
+            drawAscentChart(Dmax, Dstop1, tstop1, Tas);
+        } else {
+            document.getElementById('ascentChart').innerHTML = '';
+        }
+    }
+
+    function drawGasChartImpossible(Fp, MG) {
+        const svg   = document.getElementById('gasChart');
+        const width = 400;
+        svg.innerHTML = `
+            <text x="0" y="12" font-size="10" font-weight="bold">${Fp} BAR</text>
+            <text x="${width}" y="12" font-size="10" text-anchor="end" font-weight="bold">0 BAR</text>
+            <rect x="0" y="45" width="${width}" height="40" fill="var(--warning-color)" rx="5" />
+            <text x="${width/2}" y="70" font-size="12" font-weight="bold" text-anchor="middle" fill="white">INVIABLE DIVE</text>
+        `;
+    }
+
+    function drawGasChart(Fp, TP, MG, S, sG) {
+        const svg    = document.getElementById('gasChart');
+        const width  = 400;
+        const scale  = width / Fp;
+
+        let wInbound = 0;
+        let wOutbound = 0;
+        let wBuffer = 0;
+        let wMG = MG;
+        let inboundLabel = "INBOUND";
+
+        if (S === 1) {
+            wInbound = Fp - MG;
+            wMG = MG;
+            inboundLabel = "DIVING";
+            TP = MG; 
+        } else if (S === 2) {
+            wInbound = Fp - TP;
+            wOutbound = wInbound; 
+            wBuffer = Math.max(0, TP - wOutbound - MG);
+        } else if (S === 3) {
+            wInbound = Fp - TP;
+            wOutbound = wInbound; 
+            wBuffer = Math.max(0, TP - wOutbound - MG);
+        } else if (S === 4) {
+            wInbound = Fp - TP;
+            wOutbound = 2 * sG; 
+            wBuffer = Math.max(0, TP - wOutbound - MG);
+        }
+
+        const pxInbound  = wInbound * scale;
+        const pxOutbound = wOutbound * scale;
+        const pxBuffer   = wBuffer * scale;
+        const pxMG       = wMG * scale;
+
+        let html = `
+            <text x="0" y="12" font-size="10" font-weight="bold">${Fp} BAR</text>
+            <text x="${width}" y="12" font-size="10" text-anchor="end" font-weight="bold">0 BAR</text>
+            <rect x="0" y="45" width="${width}" height="40" fill="#ddd" rx="5" />
+        `;
+
+        let currentX = 0;
+
+        if (pxInbound > 0) {
+            html += `<rect x="${currentX}" y="45" width="${pxInbound}" height="40" fill="var(--secondary-color)" ${currentX === 0 ? 'rx="5 0 0 5"' : ''} />`;
+            html += `<text x="${currentX + pxInbound/2}" y="70" font-size="9" text-anchor="middle" fill="white">${inboundLabel}</text>`;
+            currentX += pxInbound;
+        }
+
+        html += `<polygon points="${currentX},45 ${currentX-6},33 ${currentX+6},33" fill="var(--primary-color)" />`;
+        
+        if (S === 1) {
+            html += `<text x="${currentX}" y="25" font-size="11" font-weight="bold" text-anchor="middle" fill="var(--primary-color)">ASCENT: ${TP} BAR</text>`;
+        } else {
+            html += `<text x="${currentX}" y="25" font-size="11" font-weight="bold" text-anchor="middle" fill="var(--primary-color)">TURN: ${TP} BAR</text>`;
+        }
+
+        if (pxOutbound > 0) {
+            html += `<rect x="${currentX}" y="45" width="${pxOutbound}" height="40" fill="var(--reserve-color)" />`;
+            html += `<text x="${currentX + pxOutbound/2}" y="70" font-size="9" text-anchor="middle" fill="white">OUTBOUND</text>`;
+            currentX += pxOutbound;
+        }
+
+        if (pxBuffer > 0) {
+            html += `<rect x="${currentX}" y="45" width="${pxBuffer}" height="40" fill="var(--accent-color)" />`;
+            html += `<text x="${currentX + pxBuffer/2}" y="70" font-size="9" text-anchor="middle" fill="white">BUFFER</text>`;
+            currentX += pxBuffer;
+        }
+
+        if (pxMG > 0) {
+            html += `<rect x="${currentX}" y="45" width="${pxMG}" height="40" fill="var(--warning-color)" rx="0 5 5 0" />`;
+            html += `<text x="${currentX + pxMG/2}" y="70" font-size="9" text-anchor="middle" fill="white">MG</text>`;
+        }
+
+        svg.innerHTML = html;
+    }
+
+    function drawAscentChart(Dmax, Dstop1, tstop1, Tas) {
+        const svg    = document.getElementById('ascentChart');
+        const margin = { top: 20, right: 60, bottom: 45, left: 55 };
+        const width  = 400 - margin.left - margin.right;
+        const height = 240 - margin.top - margin.bottom;
+
+        const xScale = width / Tas;
+        const yScale = height / Dmax;
+
+        const p1 = { x: 0,               y: height };
+        const p2 = { x: tstop1 * xScale, y: (Dmax - Dstop1) * yScale };
+        const p3 = { x: Tas * xScale,    y: 0 };
+
+        svg.innerHTML = `
+            <g transform="translate(${margin.left}, ${margin.top})">
+                <line x1="0" y1="0" x2="0" y2="${height}" stroke="#333" stroke-width="1" />
+                <line x1="0" y1="${height}" x2="${width}" y2="${height}" stroke="#333" stroke-width="1" />
+                
+                <text x="-40" y="${height/2}" font-size="11" transform="rotate(-90, -40, ${height/2})" text-anchor="middle" font-weight="bold">Depth (m)</text>
+
+                <text x="-10" y="5" font-size="10" text-anchor="end">0 m</text>
+                <text x="-10" y="${(Dmax - Dstop1) * yScale + 5}" font-size="10" text-anchor="end" fill="var(--reserve-color)" font-weight="bold">${Dstop1} m</text>
+                <text x="-10" y="${height + 5}" font-size="10" text-anchor="end">${Dmax} m</text>
+
+                <text x="0" y="${height + 20}" font-size="10" text-anchor="middle">0'</text>
+                <text x="${tstop1 * xScale}" y="${height + 20}" font-size="10" text-anchor="middle" fill="var(--primary-color)">${tstop1}'</text>
+                <text x="${width}" y="${height + 20}" font-size="10" text-anchor="middle" font-weight="bold">${Tas}'</text>
+                <text x="${width/2}" y="${height + 35}" font-size="11" text-anchor="middle" font-weight="bold">Time (min)</text>
+
+                <text x="${(p1.x + p2.x)/2 + 5}" y="${(p1.y + p2.y)/2 - 5}" font-size="10" font-weight="bold" fill="#666">9 m/min</text>
+                <text x="${(p2.x + p3.x)/2 + 5}" y="${(p2.y + p3.y)/2 - 10}" font-size="10" font-weight="bold" fill="#666">3 m/min</text>
+
+                <line x1="${tstop1 * xScale}" y1="${(Dmax - Dstop1) * yScale}" x2="${tstop1 * xScale}" y2="${height}" stroke="#ddd" stroke-dasharray="4" />
+                <path d="M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y}" fill="none" stroke="var(--primary-color)" stroke-width="3" stroke-linejoin="round" />
+                <circle cx="${p2.x}" cy="${p2.y}" r="4" fill="var(--reserve-color)" />
+            </g>
+        `;
+    }
+</script>
+
+</body>
+</html>
+
+```

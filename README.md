@@ -26,7 +26,7 @@ These values are established to ensure a high safety margin during scientific op
 | **SCR** | Standard Surface Consumption Rate (relaxed breathing). | 20 L/min |
 | **SCRs** | Stressed Surface Consumption Rate (emergency/panic breathing). | 30 L/min |
 | **vh** | Cave exit swimming speed. | 0.5 m/s |
-| **vd** | Descent rate. Standard recreational/technical reference value. |18 m/s |
+| **vd** | Descent rate. Standard recreational/technical reference value. |18 m/min |
 
 ### Output Metrics
 Results provided for the execution of the dive plan:
@@ -45,10 +45,10 @@ Results provided for the execution of the dive plan:
 
 ## 2. Penetration Strategies
 
-* **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments.** No suitable for overhead environments.
-* **Strategy 2 (Rule of Halves):** 50% for the first leg, 50% for the return leg. **Not suitable for cave diving.** No suitable for overhead environments.
-* **Strategy 3 (Rule of Thirds):** Standard cave protocol (1/3 in, 1/3 out, 1/3 reserve). Assumes equal inbound and outbound speeds
-* **Strategy 4 (Cave sampling):** Specifically designed for scientific cave diving. Accounts for slow inbound penetration (data collection) and faster direct exit. Calculates Turn Pressure based on actual exit distance and emergency gas-sharing scenarios, and provides Working Time to estimate effective sampling duration.
+* **Strategy 1 (All Available Gas):** Uses all gas down to the Minimum Gas limit. **Not suitable for overhead environments**.
+* **Strategy 2 (Rule of Halves):** 50% for the first leg, 50% for the return leg. **Not suitable for cave diving**.
+* **Strategy 3 (Rule of Thirds - GUE Standard):** Standard cave protocol adhering to the Global Underwater Explorers (GUE) mathematical framework. It calculates a pure third of the total cylinder pressure for penetration. If this third does not leave sufficient gas to cover the absolute Minimum Gas emergency reserve, the algorithm dynamically switches to the Rule of Halves on the usable gas, guaranteeing symmetric inbound and outbound phases without compromising emergency reserves.
+* **Strategy 4 (Cave Sampling):** Specifically designed for scientific cave diving. Accounts for slow inbound penetration (data collection) and faster direct exit. Calculates Turn Pressure based on actual exit distance and emergency gas-sharing scenarios, and provides Working Time to estimate effective sampling duration.
 
 ---
 
@@ -64,7 +64,7 @@ The planner employs a conservative algorithmic approach. All calculations are pe
 ### 3.2. Ascent Profile: Stop Half Depth
 The ascent manages off-gassing by transitioning speeds at the **Stop Half Depth** ($D_{shd}$), half of the maximum dive depth:
 $$D_{shd} = \lceil (D_{max} / 2) / 3 \rceil \times 3$$
-*This value is rounded up to the nearest multiple of 3 metres for conservatism and ease of procedure.*
+*This value is rounded up to the nearest multiple of 3 metres for conservatism and ease of procedure*.
 
 * **Phase 1 (Bottom to $D_{shd}$):** Ascent at **9 m/min**. $t_{stop1} = \lceil (D_{max} - D_{shd}) / 9 \rceil$
 * **Phase 2 ($D_{shd}$ to Surface):** Ascent at **3 m/min**. $t_{surface} = D_{shd} / 3$
@@ -73,18 +73,24 @@ $$D_{shd} = \lceil (D_{max} / 2) / 3 \rceil \times 3$$
 ### 3.3. Gas Reserves and Availability
 * **Minimum Gas ($MG$):** Reserve for two divers sharing air under stress from the start of the ascent to the surface.
     $$mG = \frac{SCR_s \times P_{av} \times T_{as} \times 2}{T_{vol}}$$
-    *Rounded up to the nearest 10 BAR.*
+    *Rounded up to the nearest 10 BAR*.
 
 * **Usable Gas ($UG$):** $F_p - mG$.
-    *Rounded down to the nearest 10 BAR.*
+    *Rounded down to the nearest 10 BAR*.
 
 ### 3.4. Turn Pressure ($TP$) Logic
-For **Strategy 4 (Cave sampling)**, $TP$ accounts for the specific exit requirements:
+
+For **Strategy 3 (Rule of Thirds - GUE Standard)**, the algorithm evaluates the safety of a geometric third:
+1. **Pure Thirds Check:** Calculate one third of the total fill pressure ($F_p / 3$).
+2. **Turn Pressure:** * If $(F_p / 3) \geq MG$, then $TP = \lceil F_p - (F_p / 3) \rceil_{10}$. 
+   * If $(F_p / 3) < MG$, it falls back to the Rule of Halves on the usable gas: $TP = \lceil F_p - ((F_p - MG) / 2) \rceil_{10}$.
+
+For **Strategy 4 (Cave Sampling)**, $TP$ accounts for the specific exit requirements:
 1. **Exit Gas Consumption ($sG$):** Gas for two divers to swim distance $P_n$ at speed $v_h$.
     $$sG = \frac{ \left(\frac{P_n}{v_h \times 60}\right) \times SCR_s \times P_{ad} }{T_{vol}}$$
 2. **Turn Pressure:**
     $$TP = \lceil \frac{1}{3}UG + MG + 2 \times sG \rceil_{10}$$
-    *This ensures enough gas for an emergency for two divers sharing gas at the furthest point.*
+    *This ensures enough gas for an emergency for two divers sharing gas at the furthest point*.
 
 ### 3.5. Bottom Time ($T_b$) and Working Time ($T_w$)
 
@@ -134,7 +140,6 @@ $$\text{Inbound fraction} = \frac{F_p - TP}{F_p - MG}$$
 
 When this fraction falls below 0.25, the diver has less than one quarter of the usable gas available for the inbound phase, which is operationally insufficient for meaningful scientific cave sampling.
 
-
 ---
 
 ## 4. Usage
@@ -148,5 +153,4 @@ The tool includes a standalone HTML web app designed for maximum flexibility in 
 * **Mobile Execution:** To use it on a mobile device, simply download the file `scicavedive_planner_v1_0_0.html` to your device's storage. You can open the file directly using any standard web browser (e.g., Chrome, Safari, Firefox) without needing mobile data or Wi-Fi.
 * **Pre-Dive Planning:** Its offline nature allows for quick, last-minute adjustments to the dive plan at the water's edge or on the vessel just before the immersion.
 
-**Developed by:** Yeray Gonzalez-Marrero  
-
+**Developed by:** Yeray Gonzalez-Marrero
